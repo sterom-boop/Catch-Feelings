@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Catch Feelings — a game for two</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fdf8f3;
+  --surface:#ffffff;
+  --surface2:#fdf4ee;
+  --border:rgba(0,0,0,0.07);
+  --border2:rgba(0,0,0,0.12);
+  --text:#1c1714;
+  --muted:#7a6e6a;
+  --faint:#b8aeaa;
+  --rose:#c94f7c;
+  --rose-pale:#fceef4;
+  --rose-deep:#9e3460;
+  --peach:#e8825a;
+  --peach-pale:#fdf0eb;
+  --gold:#b8893a;
+  --gold-pale:#fdf5e6;
+  --sage:#4a9073;
+  --sage-pale:#edf5f1;
+  --sky:#4a7fb5;
+  --sky-pale:#eef4fb;
+  --lavender:#7c6bbf;
+  --lavender-pale:#f2f0fb;
+  --radius:22px;
+  --radius-sm:14px;
+}
+
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── DECORATIVE BG BLOBS ── */
+.blob{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;opacity:0.35}
+.blob1{width:500px;height:500px;background:radial-gradient(circle,#f7c5d8,transparent);top:-150px;right:-100px}
+.blob2{width:400px;height:400px;background:radial-gradient(circle,#fde8d5,transparent);bottom:-100px;left:-100px}
+.blob3{width:300px;height:300px;background:radial-gradient(circle,#e8f0fd,transparent);top:40%;left:60%}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.25rem;position:relative;z-index:1}
+.screen.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.screen.active > *{animation:fadeUp 0.5s ease both}
+.screen.active > *:nth-child(1){animation-delay:0.05s}
+.screen.active > *:nth-child(2){animation-delay:0.13s}
+.screen.active > *:nth-child(3){animation-delay:0.21s}
+.screen.active > *:nth-child(4){animation-delay:0.29s}
+.screen.active > *:nth-child(5){animation-delay:0.37s}
+.screen.active > *:nth-child(6){animation-delay:0.45s}
+.screen.active > *:nth-child(7){animation-delay:0.53s}
+
+/* ── TYPOGRAPHY ── */
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:var(--rose);margin-bottom:0.75rem}
+.display{font-family:'Fraunces',serif;font-size:clamp(4rem,13vw,7.5rem);font-weight:300;font-style:italic;line-height:0.9;letter-spacing:-0.02em;color:var(--text);position:relative}
+.display em{font-style:normal;color:var(--rose)}
+.tagline{font-size:15px;color:var(--muted);font-weight:300;letter-spacing:0.01em;line-height:1.6}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 30px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.18s;border:none;letter-spacing:0.01em;text-decoration:none}
+.btn-primary{background:var(--rose);color:#fff;box-shadow:0 4px 20px rgba(201,79,124,0.25)}
+.btn-primary:hover{background:var(--rose-deep);transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,79,124,0.35)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--rose);color:var(--rose)}
+.btn-sm{padding:9px 20px;font-size:13px}
+.btn:active{transform:scale(0.97)!important}
+
+/* ── WELCOME ── */
+#screen-welcome{text-align:center;gap:0}
+.welcome-sub{margin:1.25rem 0 2.75rem}
+.welcome-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px}
+.welcome-note{margin-top:2.5rem;font-size:12px;color:var(--faint);letter-spacing:0.03em}
+
+/* little floating hearts */
+.hearts{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.heart{position:absolute;font-size:14px;opacity:0;animation:floatHeart var(--dur,8s) var(--delay,0s) infinite}
+@keyframes floatHeart{
+  0%{transform:translateY(110vh) rotate(var(--rot,0deg));opacity:0}
+  10%{opacity:0.4}
+  90%{opacity:0.15}
+  100%{transform:translateY(-10vh) rotate(calc(var(--rot,0deg) + 30deg));opacity:0}
+}
+
+/* ── SETUP ── */
+#screen-setup{justify-content:flex-start;padding-top:2.5rem;padding-bottom:2rem;max-width:500px;margin:0 auto;gap:1.4rem;width:100%}
+.setup-back{align-self:flex-start;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:'DM Sans',sans-serif;padding:0;transition:color 0.15s}
+.setup-back:hover{color:var(--text)}
+.setup-title{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:300;font-style:italic;color:var(--text);align-self:flex-start}
+.setup-divider{width:100%;height:1px;background:var(--border)}
+.setup-group{width:100%}
+.setup-label{font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem}
+
+.pill-row{display:flex;gap:8px;flex-wrap:wrap}
+.sel-pill{padding:9px 18px;border-radius:999px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.15s}
+.sel-pill:hover{border-color:var(--border2);color:var(--text)}
+.sel-pill.active{border-color:var(--rose);background:var(--rose-pale);color:var(--rose)}
+
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cat-toggle{padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:9px;text-align:left}
+.cat-toggle .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);transition:background 0.15s;flex-shrink:0}
+.cat-toggle.active{border-color:currentColor}
+.cat-toggle.active .dot{background:currentColor}
+.cat-toggle.active.c-fun{color:var(--gold)}
+.cat-toggle.active.c-past{color:var(--lavender)}
+.cat-toggle.active.c-values{color:var(--sage)}
+.cat-toggle.active.c-future{color:var(--sky)}
+.cat-toggle.active.c-us{color:var(--rose)}
+
+.intensity-row{display:flex;gap:8px;flex-wrap:wrap}
+.int-pill{padding:9px 18px;border-radius:999px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.3}
+.int-pill span{font-size:10px;color:var(--faint)}
+.int-pill:hover{color:var(--text)}
+.int-pill.active.i-chill{border-color:var(--sage);background:var(--sage-pale);color:var(--sage)}
+.int-pill.active.i-real{border-color:var(--gold);background:var(--gold-pale);color:var(--gold)}
+.int-pill.active.i-brutal{border-color:var(--peach);background:var(--peach-pale);color:var(--peach)}
+.int-pill.active span{color:inherit;opacity:0.7}
+
+.setup-cta{display:flex;gap:10px;width:100%}
+
+/* ── GAME ── */
+#screen-game{justify-content:flex-start;padding-top:1.75rem;max-width:520px;margin:0 auto;width:100%;gap:0}
+
+.game-header{width:100%;display:flex;align-items:center;gap:10px;margin-bottom:1.5rem}
+.game-logo{font-family:'Fraunces',serif;font-size:1rem;font-weight:300;font-style:italic;color:var(--rose);flex-shrink:0}
+.prog-wrap{flex:1}
+.prog-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:5px}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--rose),var(--peach));transition:width 0.5s ease}
+.prog-text{font-size:11px;color:var(--faint);letter-spacing:0.03em}
+.btn-x{background:transparent;border:none;color:var(--faint);font-size:16px;cursor:pointer;padding:4px 6px;transition:color 0.15s;font-family:'DM Sans',sans-serif;flex-shrink:0}
+.btn-x:hover{color:var(--muted)}
+
+/* card */
+.card-scene{width:100%;position:relative;margin-bottom:1.1rem;perspective:800px}
+.card-bg1{position:absolute;inset:0;transform:translate(6px,6px);border-radius:var(--radius);background:var(--rose-pale);border:1px solid rgba(201,79,124,0.1)}
+.card-bg2{position:absolute;inset:0;transform:translate(3px,3px);border-radius:var(--radius);background:#fff;border:1px solid var(--border)}
+.q-card{position:relative;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:2.25rem 2rem;min-height:265px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 2px 24px rgba(0,0,0,0.06)}
+.q-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,0.09)}
+.q-card:active{transform:scale(0.98)!important}
+
+@keyframes cardNext{
+  0%{opacity:1;transform:translateY(0)}
+  35%{opacity:0;transform:translateY(-14px)}
+  36%{opacity:0;transform:translateY(14px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+.q-card.animating{animation:cardNext 0.38s ease both}
+
+.q-badge{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:4px 13px;border-radius:999px;margin-bottom:1.5rem}
+.q-badge.b-fun{background:var(--gold-pale);color:var(--gold)}
+.q-badge.b-past{background:var(--lavender-pale);color:var(--lavender)}
+.q-badge.b-values{background:var(--sage-pale);color:var(--sage)}
+.q-badge.b-future{background:var(--sky-pale);color:var(--sky)}
+.q-badge.b-us{background:var(--rose-pale);color:var(--rose)}
+
+.q-text{font-family:'Fraunces',serif;font-size:clamp(1.15rem,3.8vw,1.45rem);line-height:1.58;text-align:center;color:var(--text);font-weight:300}
+.q-depth{margin-top:1.1rem;font-size:11.5px;color:var(--faint);font-style:italic;text-align:center}
+.tap-hint{margin-top:1.25rem;font-size:11px;color:var(--faint);letter-spacing:0.04em}
+
+/* actions row */
+.actions-row{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:1.1rem;flex-wrap:wrap;justify-content:center}
+.btn-twist{background:var(--peach-pale);border:1px solid rgba(232,130,90,0.3);color:var(--peach);padding:8px 16px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;letter-spacing:0.02em}
+.btn-twist:hover{background:rgba(232,130,90,0.18);border-color:var(--peach)}
+.btn-skip{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:8px 16px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all 0.15s}
+.btn-skip:hover{border-color:var(--muted);color:var(--text)}
+
+/* rating */
+.rate-card{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.2rem 1.4rem;margin-bottom:1.1rem}
+.rate-top{font-size:11.5px;color:var(--muted);margin-bottom:1rem;line-height:1.5}
+.rate-row{display:flex;align-items:center;margin-bottom:0.6rem}
+.rate-row:last-child{margin-bottom:0}
+.rate-lbl{font-size:12px;color:var(--muted);min-width:88px}
+.rate-stars{display:flex;gap:3px}
+.s-btn{background:none;border:none;font-size:19px;cursor:pointer;color:var(--faint);transition:color 0.1s,transform 0.1s;line-height:1;padding:1px}
+.s-btn.on{color:var(--rose)}
+.s-btn:hover:not(.on){color:var(--faint);transform:scale(1.15)}
+.s-btn.on:hover{transform:scale(1.1)}
+
+.nav-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding-bottom:2rem;gap:10px}
+
+/* ── TWIST POPUP ── */
+.overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:rgba(253,248,243,0.8);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity 0.22s}
+.overlay.show{opacity:1;pointer-events:all}
+.twist-box{background:var(--surface);border:1px solid rgba(232,130,90,0.25);border-radius:var(--radius);padding:2.5rem 2rem;max-width:340px;width:100%;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,0.1)}
+.twist-eyebrow{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--peach);margin-bottom:1rem}
+.twist-headline{font-family:'Fraunces',serif;font-size:2rem;font-style:italic;font-weight:300;color:var(--text);margin-bottom:0.6rem;line-height:1.25}
+.twist-body{font-size:13.5px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6;font-weight:300}
+.twist-dismiss{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:9px 22px;border-radius:999px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.15s}
+.twist-dismiss:hover{border-color:var(--peach);color:var(--peach)}
+
+/* ── END SCREEN ── */
+#screen-end{text-align:center;max-width:480px;margin:0 auto;gap:1.4rem;width:100%}
+.end-vibe-emoji{font-size:4rem;line-height:1;display:block}
+.end-vibe-text{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:300;font-style:italic;color:var(--text);line-height:1.3;max-width:300px;margin:0 auto}
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem 0.75rem;text-align:center}
+.stat-n{font-family:'Fraunces',serif;font-size:2rem;font-weight:300;color:var(--rose);line-height:1}
+.stat-l{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:0.02em}
+.breakdown-card{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem 1.4rem;text-align:left}
+.breakdown-title{font-size:10.5px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+.bd-row{display:flex;align-items:center;gap:10px;margin-bottom:0.65rem}
+.bd-row:last-child{margin-bottom:0}
+.bd-cat{font-size:12px;color:var(--muted);min-width:78px}
+.bd-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.bd-fill{height:100%;border-radius:3px;transition:width 0.7s ease}
+.bd-score{font-size:12px;color:var(--text);min-width:26px;text-align:right}
+.seen-card{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem 1.4rem;text-align:left;max-height:190px;overflow-y:auto;display:none}
+.seen-item{font-size:12.5px;color:var(--muted);padding:0.45rem 0;border-bottom:1px solid var(--border);line-height:1.5;font-style:italic;font-family:'Fraunces',serif;font-weight:300}
+.seen-item:last-child{border-bottom:none}
+.end-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<!-- floating hearts -->
+<div class="hearts" id="hearts"></div>
+
+<!-- ═══════════ WELCOME ═══════════ -->
+<div class="screen active" id="screen-welcome">
+  <div class="eyebrow">a game for two</div>
+  <div class="display">Catch<br/><em>Feelings</em></div>
+  <div class="welcome-sub">
+    <div class="tagline">questions that close the gap.</div>
+  </div>
+  <div class="welcome-btns">
+    <button class="btn btn-primary" onclick="goTo('screen-setup')">start a game</button>
+  </div>
+  <div class="welcome-note">best played on a call together</div>
+</div>
+
+<!-- ═══════════ SETUP ═══════════ -->
+<div class="screen" id="screen-setup">
+  <button class="setup-back" onclick="goTo('screen-welcome')">← back</button>
+  <div class="setup-title">set the mood</div>
+
+  <div class="setup-group">
+    <div class="setup-label">game length</div>
+    <div class="pill-row">
+      <button class="sel-pill active" onclick="setLength(this,10)">quick · 10</button>
+      <button class="sel-pill" onclick="setLength(this,20)">standard · 20</button>
+      <button class="sel-pill" onclick="setLength(this,35)">deep dive · 35</button>
+    </div>
+  </div>
+
+  <div class="setup-divider"></div>
+
+  <div class="setup-group">
+    <div class="setup-label">categories</div>
+    <div class="cat-grid">
+      <button class="cat-toggle active c-fun" data-cat="fun" onclick="toggleCat(this)"><span class="dot"></span>fun &amp; light</button>
+      <button class="cat-toggle active c-past" data-cat="past" onclick="toggleCat(this)"><span class="dot"></span>past &amp; experiences</button>
+      <button class="cat-toggle active c-values" data-cat="values" onclick="toggleCat(this)"><span class="dot"></span>values &amp; beliefs</button>
+      <button class="cat-toggle active c-future" data-cat="future" onclick="toggleCat(this)"><span class="dot"></span>future &amp; vision</button>
+      <button class="cat-toggle active c-us" data-cat="us" onclick="toggleCat(this)"><span class="dot"></span>us</button>
+    </div>
+  </div>
+
+  <div class="setup-divider"></div>
+
+  <div class="setup-group">
+    <div class="setup-label">intensity</div>
+    <div class="intensity-row">
+      <button class="int-pill active i-chill" data-int="chill" onclick="setIntensity(this,'chill')">chill<span>light &amp; easy</span></button>
+      <button class="int-pill i-real" data-int="real" onclick="setIntensity(this,'real')">real<span>we go there</span></button>
+      <button class="int-pill i-brutal" data-int="brutal" onclick="setIntensity(this,'brutal')">brutal<span>no soft answers</span></button>
+    </div>
+  </div>
+
+  <div class="setup-cta">
+    <button class="btn btn-primary" style="flex:1" onclick="startGame()">let's play →</button>
+  </div>
+</div>
+
+<!-- ═══════════ GAME ═══════════ -->
+<div class="screen" id="screen-game">
+
+  <div class="game-header">
+    <div class="game-logo">Catch Feelings</div>
+    <div class="prog-wrap">
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="prog-text" id="prog-text">question 1 of 10</div>
+    </div>
+    <button class="btn-x" onclick="confirmQuit()">✕</button>
+  </div>
+
+  <div class="card-scene">
+    <div class="card-bg1"></div>
+    <div class="card-bg2"></div>
+    <div class="q-card" id="q-card" onclick="nextQ()">
+      <div class="q-badge" id="q-badge">fun &amp; light</div>
+      <div class="q-text" id="q-text">Loading…</div>
+      <div class="q-depth" id="q-depth"></div>
+      <div class="tap-hint">tap to advance</div>
+    </div>
+  </div>
+
+  <div class="actions-row">
+    <button class="btn-twist" onclick="showTwist()">🎲 add a twist</button>
+    <button class="btn-skip" onclick="nextQ()">skip →</button>
+  </div>
+
+  <div class="rate-card">
+    <div class="rate-top">after you both answer — how did that one feel?</div>
+    <div class="rate-row">
+      <div class="rate-lbl">connection</div>
+      <div class="rate-stars" id="rs-connection" data-key="connection"></div>
+    </div>
+    <div class="rate-row">
+      <div class="rate-lbl">alignment</div>
+      <div class="rate-stars" id="rs-alignment" data-key="alignment"></div>
+    </div>
+    <div class="rate-row">
+      <div class="rate-lbl">effort</div>
+      <div class="rate-stars" id="rs-effort" data-key="effort"></div>
+    </div>
+  </div>
+
+  <div class="nav-row">
+    <button class="btn btn-ghost btn-sm" onclick="prevQ()">← prev</button>
+    <button class="btn btn-primary" onclick="nextQ()">next →</button>
+  </div>
+</div>
+
+<!-- ═══════════ END ═══════════ -->
+<div class="screen" id="screen-end">
+  <div class="eyebrow">that's a wrap</div>
+  <span class="end-vibe-emoji" id="end-emoji">✨</span>
+  <div class="end-vibe-text" id="end-vibe">something real is growing here</div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-n" id="s-conn">–</div><div class="stat-l">connection</div></div>
+    <div class="stat-box"><div class="stat-n" id="s-align">–</div><div class="stat-l">alignment</div></div>
+    <div class="stat-box"><div class="stat-n" id="s-effort">–</div><div class="stat-l">effort</div></div>
+  </div>
+
+  <div class="breakdown-card">
+    <div class="breakdown-title">by category</div>
+    <div id="bd-cats"></div>
+  </div>
+
+  <div class="seen-card" id="seen-card">
+    <div class="breakdown-title">questions you covered</div>
+    <div id="seen-list"></div>
+  </div>
+
+  <div class="end-btns">
+    <button class="btn btn-primary" onclick="startGame()">play again</button>
+    <button class="btn btn-ghost" onclick="goTo('screen-setup')">change setup</button>
+    <button class="btn btn-ghost" onclick="goTo('screen-welcome')">home</button>
+  </div>
+</div>
+
+<!-- ═══════════ TWIST OVERLAY ═══════════ -->
+<div class="overlay" id="twist-overlay">
+  <div class="twist-box">
+    <div class="twist-eyebrow">🎲 twist card</div>
+    <div class="twist-headline" id="twist-h">Go deeper</div>
+    <div class="twist-body" id="twist-b">Don't stop at the surface answer.</div>
+    <button class="twist-dismiss" onclick="closeTwist()">got it</button>
+  </div>
+</div>
+
+<script>
+// ── HEARTS ──
+(function(){
+  const c=document.getElementById('hearts');
+  const symbols=['♡','♥','✦','·','˚'];
+  for(let i=0;i<18;i++){
+    const h=document.createElement('div');
+    h.className='heart';
+    h.textContent=symbols[Math.floor(Math.random()*symbols.length)];
+    const x=Math.random()*100;
+    const dur=7+Math.random()*10;
+    const delay=Math.random()*12;
+    const rot=(Math.random()-0.5)*40;
+    h.style.cssText=`left:${x}%;--dur:${dur}s;--delay:${delay}s;--rot:${rot}deg;color:var(--rose);opacity:0`;
+    c.appendChild(h);
+  }
+})();
+
+// ── DATA ──
+const QS={
+  fun:[
+    {q:"What's your perfect day from start to finish?",i:"chill"},
+    {q:"What kind of vibe do you bring to a party?",i:"chill"},
+    {q:"What makes you instantly like someone?",i:"chill"},
+    {q:"What's something random that makes you genuinely happy?",i:"chill"},
+    {q:"What's your love language in practice — not theory?",i:"chill"},
+    {q:"What's a guilty pleasure you never actually feel guilty about?",i:"chill"},
+    {q:"What kind of music feels most like you?",i:"chill"},
+    {q:"What's your go-to comfort activity when life is a lot?",i:"chill"},
+    {q:"What do your friends say about you when you're not in the room?",i:"chill"},
+    {q:"What kind of humor do you have?",i:"chill"},
+    {q:"What's something small that makes you feel really cared for?",i:"chill"},
+    {q:"What's your ideal weekend — be specific?",i:"chill"},
+    {q:"What kind of person do you become when you're fully relaxed?",i:"chill"},
+    {q:"What annoys you instantly and you can't fully explain why?",i:"real"},
+    {q:"What's your honest energy like in relationships?",i:"real"},
+    {q:"What do you actually like about me so far?",i:"real"},
+    {q:"What made you genuinely interested in getting to know me?",i:"real"},
+    {q:"What's something you wish people understood about you?",i:"real"},
+    {q:"What's your favorite way to spend time with someone you really like?",i:"chill"},
+    {q:"What makes you feel attractive — genuinely?",i:"real"},
+  ],
+  past:[
+    {q:"What has hurt you most in dating?",i:"real"},
+    {q:"What did your last relationship teach you about yourself?",i:"real"},
+    {q:"When did you feel most loved by someone?",i:"real"},
+    {q:"When have you felt most misunderstood?",i:"real"},
+    {q:"What patterns have you noticed in your relationships?",i:"real"},
+    {q:"Do you tend to leave or stay when things get hard?",i:"real"},
+    {q:"What are you still healing from?",i:"brutal"},
+    {q:"Have you ever broken someone's heart?",i:"real"},
+    {q:"What do you regret most in past relationships?",i:"brutal"},
+    {q:"What kind of partner have you been — honestly?",i:"brutal"},
+    {q:"What scares you now, based on your past?",i:"real"},
+    {q:"What experience made you grow the most emotionally?",i:"real"},
+    {q:"Have you ever avoided communication in a relationship? Why?",i:"real"},
+    {q:"What does conflict look like for you in practice?",i:"real"},
+    {q:"How do you react when you're completely overwhelmed?",i:"real"},
+    {q:"What do you wish you'd done differently?",i:"brutal"},
+    {q:"When have you felt most secure with someone?",i:"real"},
+    {q:"What triggers you in relationships and where does that come from?",i:"brutal"},
+    {q:"What does emotional safety mean to you?",i:"real"},
+    {q:"What do you still carry from your past into right now?",i:"brutal"},
+  ],
+  values:[
+    {q:"What does being a good partner actually mean to you?",i:"real"},
+    {q:"How important is communication — really, in practice?",i:"real"},
+    {q:"What does daily effort look like to you?",i:"real"},
+    {q:"What are your top three values in life?",i:"real"},
+    {q:"What does trust mean to you and how do you build it?",i:"real"},
+    {q:"What would genuinely make you lose interest in someone?",i:"real"},
+    {q:"What are your real non-negotiables?",i:"brutal"},
+    {q:"What does respect look like in a relationship to you?",i:"real"},
+    {q:"How do you show love — the way you actually do it, not the ideal version?",i:"chill"},
+    {q:"What do you expect from a partner emotionally?",i:"real"},
+    {q:"What role does independence play in your life?",i:"real"},
+    {q:"How do you handle disagreements with someone you care about?",i:"real"},
+    {q:"What does commitment mean to you?",i:"brutal"},
+    {q:"How do you prioritize the people you love?",i:"real"},
+    {q:"What does consistency mean to you?",i:"real"},
+    {q:"What do you think ruins most relationships?",i:"real"},
+    {q:"What does 'showing up' actually look like?",i:"real"},
+    {q:"Do you think timing matters more, or the person?",i:"real"},
+    {q:"What are you completely unwilling to compromise on?",i:"brutal"},
+    {q:"What does emotional maturity look like to you?",i:"real"},
+    {q:"How do you handle distance — emotional or physical?",i:"real"},
+    {q:"What's more important to you: chemistry or compatibility?",i:"real"},
+    {q:"What makes someone worth fighting for?",i:"brutal"},
+    {q:"How do you know when something is real?",i:"brutal"},
+  ],
+  future:[
+    {q:"Where do you picture yourself living in two or three years?",i:"chill"},
+    {q:"What kind of life are you actively building?",i:"real"},
+    {q:"Do you want stability or adventure — or is it both?",i:"chill"},
+    {q:"What role does career play in your life now and in the future?",i:"real"},
+    {q:"How important is family in the life you're building?",i:"real"},
+    {q:"What does success mean to you — the real definition?",i:"real"},
+    {q:"What are you currently working toward that matters most?",i:"real"},
+    {q:"What are you afraid won't happen for you?",i:"brutal"},
+    {q:"What kind of partner fits the future you're building?",i:"real"},
+    {q:"How do you make big life decisions?",i:"real"},
+    {q:"Would you move for the right person?",i:"brutal"},
+    {q:"What timeline do you have in mind for relationships?",i:"brutal"},
+    {q:"What does your ideal relationship look like day-to-day?",i:"real"},
+    {q:"What does 'building a life together' mean to you?",i:"real"},
+    {q:"What are you not ready for yet?",i:"brutal"},
+    {q:"What kind of environment do you thrive in?",i:"real"},
+    {q:"Do you want kids — and if so, what kind of parent do you want to be?",i:"brutal"},
+    {q:"What's something you've always wanted to do but keep putting off?",i:"chill"},
+    {q:"What does your dream life feel like, emotionally?",i:"real"},
+    {q:"How do you imagine your relationship with your family changing as you get older?",i:"real"},
+  ],
+  us:[
+    {q:"What do you actually feel when you think about us?",i:"real"},
+    {q:"What excites you about this?",i:"real"},
+    {q:"What scares you about us?",i:"brutal"},
+    {q:"Do you feel like I prioritize you?",i:"brutal"},
+    {q:"Do you feel like you prioritize me?",i:"brutal"},
+    {q:"Where do you feel like we're misaligned?",i:"brutal"},
+    {q:"What do you need more of from me?",i:"brutal"},
+    {q:"What do you think I need more of from you?",i:"brutal"},
+    {q:"What would make this fail?",i:"brutal"},
+    {q:"What would make this actually work?",i:"real"},
+    {q:"Do you feel emotionally safe with me?",i:"real"},
+    {q:"What's something you haven't told me yet?",i:"brutal"},
+    {q:"Are we moving at the right pace?",i:"real"},
+    {q:"What doubts do you have — say them out loud?",i:"brutal"},
+    {q:"What are we avoiding talking about?",i:"brutal"},
+    {q:"How do you feel after we talk versus when we don't?",i:"real"},
+    {q:"What would make you walk away from this?",i:"brutal"},
+    {q:"What would make you choose this fully?",i:"brutal"},
+    {q:"Do you feel consistency between us?",i:"real"},
+    {q:"What do you want this to become?",i:"real"},
+    {q:"Are we aligned in what we want right now?",i:"brutal"},
+    {q:"What do you need to feel secure with me?",i:"real"},
+    {q:"What do you think I need to feel secure with you?",i:"real"},
+    {q:"If nothing changed, would this work?",i:"brutal"},
+    {q:"What's one thing about us that makes you hopeful?",i:"real"},
+  ]
+};
+
+const TWISTS=[
+  {h:"Go deeper",b:"Don't stop at the first answer. Push past the easy version."},
+  {h:"Flip it",b:"Ask the same question back — but now answer it about the other person."},
+  {h:"Be honest",b:"Say the thing you were about to leave out."},
+  {h:"Real talk",b:"No softening, no filters. What do you actually think?"},
+  {h:"Give an example",b:"Don't just say it — give a real moment from your life that shows it."},
+  {h:"Say what you're not saying",b:"What's underneath that answer?"},
+  {h:"The uncomfortable version",b:"Answer it like you have nothing to lose."},
+  {h:"Switch first",b:"The other person goes first this time."},
+  {h:"One word only",b:"Each person answers in one word. Then explain why."},
+  {h:"Gut check",b:"Ignore your brain. What does your gut say?"},
+  {h:"The follow-up",b:"Ask each other one follow-up question based on what was just said."},
+  {h:"No qualifiers",b:"Answer without saying 'it depends', 'kind of', or 'I think'. Just say it."},
+];
+
+const CAT_COLORS={fun:'#b8893a',past:'#7c6bbf',values:'#4a9073',future:'#4a7fb5',us:'#c94f7c'};
+const CAT_LABELS={fun:'fun & light',past:'past & experiences',values:'values & beliefs',future:'future & vision',us:'us'};
+const INT_ORDER={chill:0,real:1,brutal:2};
+
+// ── STATE ──
+let cfg={length:10,cats:['fun','past','values','future','us'],intensity:'chill'};
+let deck=[],qIdx=0,ratings=[],cur={connection:0,alignment:0,effort:0},seenQs=[];
+
+// ── HELPERS ──
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function shuffle(a){
+  const b=[...a];
+  for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}
+  return b;
+}
+
+// ── SETUP ──
+function setLength(el,v){
+  document.querySelectorAll('.sel-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');cfg.length=v;
+}
+function toggleCat(el){
+  const cat=el.dataset.cat,idx=cfg.cats.indexOf(cat);
+  if(idx>-1){if(cfg.cats.length===1)return;cfg.cats.splice(idx,1);el.classList.remove('active');}
+  else{cfg.cats.push(cat);el.classList.add('active');}
+}
+function setIntensity(el,v){
+  document.querySelectorAll('.int-pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');cfg.intensity=v;
+}
+
+// ── DECK ──
+function buildDeck(){
+  const lvl=INT_ORDER[cfg.intensity];
+  let pool=[];
+  cfg.cats.forEach(cat=>{
+    QS[cat].filter(q=>INT_ORDER[q.i]<=lvl).forEach(q=>pool.push({...q,cat}));
+  });
+  deck=shuffle(pool).slice(0,cfg.length);
+}
+
+// ── GAME ──
+function startGame(){
+  buildDeck();qIdx=0;ratings=[];seenQs=[];cur={connection:0,alignment:0,effort:0};
+  renderQ();renderStars();goTo('screen-game');
+}
+
+function renderQ(anim=false){
+  if(qIdx>=deck.length){endGame();return;}
+  const q=deck[qIdx];
+  seenQs[qIdx]=q.q;
+
+  const badge=document.getElementById('q-badge');
+  badge.textContent=CAT_LABELS[q.cat];
+  badge.className='q-badge b-'+q.cat;
+
+  document.getElementById('q-text').textContent=q.q;
+
+  const depth=document.getElementById('q-depth');
+  if(cfg.intensity==='brutal'&&q.i==='brutal')depth.textContent='this one cuts deep — no soft answers';
+  else if(q.i==='brutal'&&cfg.intensity==='real')depth.textContent='push past the easy answer';
+  else depth.textContent='';
+
+  const pct=deck.length>1?Math.round((qIdx/(deck.length-1))*100):100;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-text').textContent=`question ${qIdx+1} of ${deck.length}`;
+
+  cur={connection:0,alignment:0,effort:0};renderStars();
+
+  if(anim){
+    const c=document.getElementById('q-card');
+    c.classList.remove('animating');void c.offsetWidth;c.classList.add('animating');
+  }
+}
+
+function nextQ(){saveRating();if(qIdx<deck.length-1){qIdx++;renderQ(true);}else{saveRating();endGame();}}
+function prevQ(){if(qIdx>0){qIdx--;renderQ(true);}}
+function saveRating(){if(cur.connection||cur.alignment||cur.effort)ratings[qIdx]={...cur,cat:deck[qIdx]?.cat};}
+function confirmQuit(){if(confirm('End the game and see your results?'))endGame();}
+
+// ── STARS ──
+function renderStars(){
+  ['connection','alignment','effort'].forEach(key=>{
+    const wrap=document.getElementById('rs-'+key);
+    wrap.innerHTML='';
+    for(let i=1;i<=5;i++){
+      const b=document.createElement('button');
+      b.className='s-btn'+(i<=cur[key]?' on':'');
+      b.textContent='★';
+      const val=i,k=key;
+      b.onclick=()=>{cur[k]=val;renderStars();};
+      wrap.appendChild(b);
+    }
+  });
+}
+
+// ── TWIST ──
+function showTwist(){
+  const t=TWISTS[Math.floor(Math.random()*TWISTS.length)];
+  document.getElementById('twist-h').textContent=t.h;
+  document.getElementById('twist-b').textContent=t.b;
+  document.getElementById('twist-overlay').classList.add('show');
+}
+function closeTwist(){document.getElementById('twist-overlay').classList.remove('show');}
+
+// ── END ──
+function endGame(){
+  saveRating();
+  const scored=ratings.filter(r=>r&&(r.connection||r.alignment||r.effort));
+  function avg(k){return scored.length?scored.reduce((a,r)=>a+(r[k]||0),0)/scored.length:0;}
+  const aC=avg('connection'),aA=avg('alignment'),aE=avg('effort'),ov=(aC+aA+aE)/3;
+
+  let emoji,vibe;
+  if(scored.length===0){emoji='💬';vibe='you talked — that\'s the whole point';}
+  else if(ov>=4.3){emoji='🔥';vibe='the connection tonight was undeniable';}
+  else if(ov>=3.5){emoji='✨';vibe='something real is growing here';}
+  else if(ov>=2.5){emoji='🌱';vibe='you\'re still figuring each other out — that\'s okay';}
+  else{emoji='💬';vibe='the hard conversations are the ones that matter';}
+
+  document.getElementById('end-emoji').textContent=emoji;
+  document.getElementById('end-vibe').textContent=vibe;
+  document.getElementById('s-conn').textContent=aC?aC.toFixed(1)+'★':'–';
+  document.getElementById('s-align').textContent=aA?aA.toFixed(1)+'★':'–';
+  document.getElementById('s-effort').textContent=aE?aE.toFixed(1)+'★':'–';
+
+  const catData={};
+  scored.forEach(r=>{
+    if(!catData[r.cat])catData[r.cat]={t:0,n:0};
+    catData[r.cat].t+=(r.connection+r.alignment+r.effort)/3;
+    catData[r.cat].n++;
+  });
+  const bdEl=document.getElementById('bd-cats');
+  bdEl.innerHTML='';
+  const sorted=Object.entries(catData).sort((a,b)=>(b[1].t/b[1].n)-(a[1].t/a[1].n));
+  if(sorted.length){
+    sorted.forEach(([cat,d])=>{
+      const sc=d.t/d.n,pct=Math.round((sc/5)*100);
+      const row=document.createElement('div');row.className='bd-row';
+      row.innerHTML=`<div class="bd-cat">${CAT_LABELS[cat]}</div><div class="bd-bar"><div class="bd-fill" style="width:${pct}%;background:${CAT_COLORS[cat]}"></div></div><div class="bd-score">${sc.toFixed(1)}</div>`;
+      bdEl.appendChild(row);
+    });
+  } else {
+    bdEl.innerHTML='<div style="font-size:12px;color:var(--faint);font-style:italic">rate some questions next time to see your breakdown</div>';
+  }
+
+  const sl=document.getElementById('seen-list'),sc2=document.getElementById('seen-card');
+  sl.innerHTML='';
+  const qs=seenQs.filter(Boolean);
+  if(qs.length){
+    qs.forEach(q=>{const d=document.createElement('div');d.className='seen-item';d.textContent=q;sl.appendChild(d);});
+    sc2.style.display='block';
+  }
+
+  goTo('screen-end');
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('screen-game').classList.contains('active'))return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nextQ();}
+  if(e.key==='ArrowLeft'){e.preventDefault();prevQ();}
+  if(e.key==='Escape')closeTwist();
+});
+</script>
+</body>
+</html>
